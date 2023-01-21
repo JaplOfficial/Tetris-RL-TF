@@ -19,6 +19,7 @@ class Tetris:
         self.height = height
         self.width = width
         self.field = []
+        self.color_map = []
         self.score = 0
         self.state = "start"
         for i in range(height):
@@ -26,9 +27,10 @@ class Tetris:
             for j in range(width):
                 new_line.append(0)
             self.field.append(new_line)
+            self.color_map.append(new_line)
 
     def new_figure(self):
-        self.figure = Figure(3, 0)
+        self.figure = Figure(3, 1)
 
     def intersects(self):
         intersection = False
@@ -54,6 +56,7 @@ class Tetris:
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
                         self.field[i1][j] = self.field[i1 - 1][j]
+                        self.color_map[i1][j] = self.color_map[i1 - 1][j]
         self.score = lines ** 2
 
     def go_space(self):
@@ -73,6 +76,7 @@ class Tetris:
             for j in range(4):
                 if i * 4 + j in self.figure.image():
                     self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
+                    self.color_map[i + self.figure.y][j + self.figure.x] = self.figure.color
         self.break_lines()
         self.new_figure()
         if self.intersects():

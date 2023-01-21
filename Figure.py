@@ -1,7 +1,7 @@
 import random
 
 colors = [
-    (128, 229, 255), (164, 93, 77), (128, 229, 255),
+    ((0, 204, 204), (204, 0, 0), (0, 204, 0), (0, 0, 204), (204, 102, 0), (153, 0, 204), (204, 204, 0)),
 ]
 
 
@@ -24,7 +24,7 @@ class Figure:
         self.y = y
         self.type = random.randint(0, len(self.figures) - 1)
         #self.type = 6
-        self.color = random.randint(1, len(colors) - 1)
+        self.color = colors[0][self.type]
         self.rotation = 0
 
     def image(self):
@@ -32,3 +32,6 @@ class Figure:
 
     def rotate(self):
         self.rotation = (self.rotation + 1) % len(self.figures[self.type])
+
+    def rotation_states(self):
+        return len(self.figures[self.type])
