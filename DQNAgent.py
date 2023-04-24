@@ -18,19 +18,20 @@ from keras.regularizers import l2
 
 
 
-from ReplayBuffer import ReplayBuffer
-
-
 def build_dqn(lr):
 
-    model = models.Sequential([
-        keras.layers.Input((4)),
-        keras.layers.Dense(256, activation='relu'),
-        keras.layers.Dense(256, activation='relu'),
-        keras.layers.Dense(1)
-    ])
+    model = tf.keras.Sequential()
 
-    model.compile(loss='mean_squared_error', optimizer=keras.optimizers.Adam())
+    # Convolutional layer
+    model.add(tf.keras.layers.Conv2D(256, kernel_size=(2, 2), strides=(1, 1), activation='relu', input_shape=(20,10,1)))
+    # Flatten the output
+    model.add(tf.keras.layers.Flatten())
+    # Fully connected layer
+    model.add(tf.keras.layers.Dense(32, activation='relu'))
+    # Output layer
+    model.add(tf.keras.layers.Dense(1, activation='linear'))
+
+    model.compile(loss='mean_squared_error', optimizer=keras.optimizers.Adam(learning_rate = lr))
 
     return model
 
@@ -55,7 +56,7 @@ class DQNAgent:
         self.epsilon_min = epsilon_end
         self.batch_size = batch_size
         self.memory = deque(maxlen=memory_size)
-        self.q_eval = build_dqn(0.01)
+        self.q_eval = build_dqn(0.0001)
         self.played = False
 
     def store_transition(self, state, new_state, reward, done):
@@ -67,8 +68,9 @@ class DQNAgent:
         else:
             best_state = 0
             maximum_score = -1
-            for i in range(len(observations)):
-                state = np.array([observations[i]])
+            for i in range(len(all_states)):
+                state = np.array([all_states[i]])
+                state = np.expand_dims(state, axis=-1)
                 score = self.q_eval.predict(state)
                 if score > maximum_score:
                     maximum_score = score
@@ -77,8 +79,8 @@ class DQNAgent:
 
     def learn(self):
         n = len(self.memory)
-        batch_size = 512
-        epochs = 3
+        batch_size = 16
+        epochs = 5
 
         if n >= batch_size:
 
@@ -87,6 +89,7 @@ class DQNAgent:
 
             # Predict Q-values of the next states
             next_states = np.array([x[1] for x in batch])
+            next_states = np.expand_dims(next_states, axis=-1)
             next_qs = [x[0] for x in self.q_eval.predict(next_states)]
 
             x = []
@@ -101,11 +104,12 @@ class DQNAgent:
                 x.append(state)
                 y.append(new_q)
 
+            x = np.expand_dims(x, axis=-1)
             # Fit the model to the given values
             self.q_eval.fit(np.array(x), np.array(y), batch_size=batch_size, epochs=epochs, verbose=0)
 
         # Update exploration rate
-        self.epsilon *= 0.9999
+        self.epsilon *= 0.999
 
 
 

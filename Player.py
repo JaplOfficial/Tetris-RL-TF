@@ -10,12 +10,12 @@ class Player():
 
     def __init__(self):
         self.agent = DQNAgent(
-            gamma=0.95,
+            gamma=0.99,
             epsilon=1,
             learning_rate=0.0001,
             input_dims=[13],
             n_actions=4,
-            memory_size=10000,
+            memory_size=1000000,
             batch_size=10,
             epsilon_end=0.01
         )
@@ -79,12 +79,16 @@ class Player():
                 if game.game.field[i][j] > 0:
                     max_height = max(max_height, 20 - i)
 
-        if game.done == True or max_height > 15:
+        if game.done == True or max_height >= 7:
             done = True
             reward -= 1
         else:
             reward += 1
 
+        if self.hole_count(before) < self.hole_count(after):
+            reward -= 1
+
+        reward -= max_height / 100
         reward += game.game.score
 
         return reward, done

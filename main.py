@@ -7,8 +7,9 @@ import Player
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-
+import sys
 import tensorflow as tf
+import os
 
 from Tetris import Tetris
 from Player import Player as Player
@@ -31,12 +32,39 @@ total_rewards = []
 total_reward = 0
 maximum = 0
 highscore = 200
+new_batch = []
 
-mode = 'train-unsupervised'
+mode = str(sys.argv[1])
+supervised_flag = str(sys.argv[2])
 
 
 # Train the DQN from scratch
-if mode == 'train-unsupervised':
+if mode == 'train':
+
+    # Make sure .dataset/ exists and contains the pickle data
+    if supervised_flag == "true" or supervised_flag == "True":
+        dir_path = r'./dataset'
+        #ite = len([entry for entry in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, entry))]) - 1
+        ite = 2
+        print('Total:', ite)
+        for b in range(ite + 1):
+            # Open the pickle file in binary read mode
+            with open(f'dataset/batch_{b}.pkl', 'rb') as file:
+                try:
+                    player.agent.epsilon = 0
+                    data = pickle.load(file)
+                    for i, (current_grid, next_grid, reward, done) in enumerate(data):
+                        print('Storing data: ', i, "/", len(data), "of", b, "/", ite)
+                        player.agent.store_transition(current_grid, next_grid, reward, done)
+                except EOFError:
+                    data = []
+        batches = 5000
+        for i in range(batches):
+            print('Trained batches: ', i, "/", batches)
+            player.agent.learn()
+
+        player.agent.save()
+
 
     for ep in range(episodes):
 
@@ -53,8 +81,31 @@ if mode == 'train-unsupervised':
         else:
             render = False
 
+
         # Every 100 episodes save the better performing model and update reward graph
         if ep % 100 == 0 and ep != 0:
+
+            if supervised_flag == "true" or supervised_flag == "True":
+            # Open the pickle file in binary read mode
+                with open(f'dataset/batch_{ite}.pkl', 'rb') as file:
+                    try:
+                        data = pickle.load(file)
+                    except EOFError:
+                        data = []
+
+
+                data += new_batch
+                new_batch = []
+
+                # Open the pickle file in binary write mode
+                with open(f'dataset/batch_{ite}.pkl', 'wb') as file:
+                    pickle.dump(data, file)
+
+                if len(data) >= 100000:
+                    ite += 1
+                    with open(f'dataset/batch_{ite}.pkl', 'wb') as file:
+                        print('New batch created')
+
             if total_reward / 100 > maximum:
                 maximum = total_reward / 100
                 player.agent.save()
@@ -76,7 +127,9 @@ if mode == 'train-unsupervised':
             reward, done = player.apply_action(game, best_state, best_grid, current_grid)
             total_reward += reward
             ep_reward += reward
-            player.agent.store_transition(current_state, best_state, reward, done)
+            data_point = (current_grid, best_grid, reward, done)
+            new_batch.append(data_point)
+            player.agent.store_transition(current_grid, best_grid, reward, done)
             player.agent.learn()
 
             if done:
@@ -112,9 +165,9 @@ elif mode == 'fine-tune':
                 render = True
                 game.render_frame(render, mode)
 
-                current_state, all_states_vectorized, all_states = game.current_state()
+                current_state, all_states_vectorized, all_states, current_grid = game.current_state()
                 best_state, best_grid = player.agent.choose_action(all_states_vectorized, all_states)
-                reward, done = player.apply_action(game, best_state, best_grid)
+                reward, done = player.apply_action(game, best_state, best_grid, current_grid)
                 total_reward += reward
                 ep_reward += reward
                 player.agent.store_transition(current_state, best_state, reward, done)
@@ -142,18 +195,13 @@ elif mode == 'play':
 
         done = False
 
-        for step in range(500):
+        while not done:
             render = True
             game.render_frame(render, mode)
 
-            current_state, all_states_vectorized, all_states = game.current_state()
+            current_state, all_states_vectorized, all_states, current_grid = game.current_state()
             best_state, best_grid = player.agent.choose_action(all_states_vectorized, all_states)
-            reward, done = player.apply_action(game, best_state, best_grid)
-            #player.agent.store_transition(current_state, best_state, reward, done)
-            #player.agent.learn()
-
-            if done:
-                break
+            reward, done = player.apply_action(game, best_state, best_grid, current_grid)
 
 
 

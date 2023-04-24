@@ -36,7 +36,7 @@ class GameManager:
         # Loop until the user clicks the close button.
         self.done = False
         self.clock = pygame.time.Clock()
-        self.fps = 1
+        self.fps = 3
         self.game = Tetris(20, 10)
         self.counter = 0
 
